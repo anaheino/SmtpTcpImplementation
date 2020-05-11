@@ -12,8 +12,9 @@ namespace SmtpClient
         private string password;
         private string mailServer;
         private TcpClient tcpClient;
-        private SslStream stream;
-        private StreamWriter streamWriter;
+        private bool isSSL;
+        private SslStream sslStream;
+        private NetworkStream stream;
         private StreamReader streamReader;
 
         public Pop3Client(string user, string password, string mailServer)
@@ -24,14 +25,23 @@ namespace SmtpClient
             tcpClient = new TcpClient();
         }
 
-        internal string OpenInbox()
+        internal string OpenInbox(int index = 0)
         {
             string result = "";
             if (!tcpClient.Connected) return "ERROR! Not connected!";
             try
             {
-                Write("LIST" + Environment.NewLine);
-                result = Read(true);
+                bool readMoreThanOneLine = false;
+                if (index.Equals(0))
+                {
+                    Write("LIST" + Environment.NewLine);
+                    readMoreThanOneLine = true;
+                }
+                else
+                {
+                    Write($"LIST {index}" + Environment.NewLine);
+                } 
+                result = Read(readMoreThanOneLine);
             }
             catch (Exception e)
             {
@@ -40,41 +50,69 @@ namespace SmtpClient
             return result;
         }
 
-        internal void Connect()
+        internal void Connect(bool ssl = true)
         {
+            isSSL = ssl;
             tcpClient.Connect(mailServer, 995);
-
-            stream = new SslStream(tcpClient.GetStream());
-            stream.AuthenticateAsClient(mailServer);
-            streamWriter = new StreamWriter(stream);
-            streamReader = new StreamReader(stream);
+            if (ssl)
+            {
+                sslStream = new SslStream(tcpClient.GetStream());
+                sslStream.AuthenticateAsClient(mailServer);
+                streamReader = new StreamReader(sslStream);
+            }
+            else
+            {
+                stream = tcpClient.GetStream();
+                streamReader = new StreamReader(stream);
+            }
         }
 
-        internal string Login()
+        internal bool Login()
         {
+            bool loginSuccess = false;
             string resultString = "";
-            try
+            if (!tcpClient.Connected) return false;
+            while (!loginSuccess)
             {
-                if (!tcpClient.Connected) return "";
-                resultString = Read();
-                Write("USER " + user.Trim() + Environment.NewLine);
-                resultString = Read();
-                Write("PASS " + password + Environment.NewLine);
-                resultString = Read();
-
+                try
+                {
+                    resultString = Read();
+                    if (resultString.Length > 0)
+                    {
+                        
+                        if (resultString.Contains("PASS"))
+                        {
+                            Write("PASS " + password + Environment.NewLine);
+                        }
+                        else if (resultString.Contains("Welcome"))
+                        {
+                            loginSuccess = true;
+                        }
+                        else if (resultString.Contains("+OK") && resultString.Contains("requests"))
+                        {
+                            Write("USER " + user.Trim() + Environment.NewLine);
+                        }
+                    }
+                }
+                catch { }
             }
-            catch (Exception e)
-            {
-                return $"Ran into problems while logging in! Latest received message: {resultString} StackTrace : {e.StackTrace}";
-            }
-            return resultString;
+            
+            return loginSuccess;
         }
 
         private void Write(string data)
         {
             var byteData = System.Text.Encoding.ASCII.GetBytes(data.ToCharArray());
-            stream.Write(byteData, 0, byteData.Length);
-            stream.Flush();
+            if (isSSL)
+            {
+                sslStream.Write(byteData, 0, byteData.Length);
+                sslStream.Flush();
+            }
+            else
+            {
+                stream.Write(byteData, 0, byteData.Length);
+                stream.Flush();
+            }
         }
 
         internal string Disconnect()
@@ -85,15 +123,16 @@ namespace SmtpClient
             return result;
         }
 
-        private string Read(bool readToEnd = false)
+        private string Read(bool readMultipleLines = false)
         {
-            string resultString = ""; 
-            if (readToEnd)
+            string resultString = "";
+            string line = null;
+            if (readMultipleLines)
             {
-                string line = "";
-                while (!line.Equals("."))
+                line = streamReader.ReadLine();
+                resultString += line;
+                while (!line.Equals(".") && !line.Contains("-ERR"))
                 {
-                    
                     line = streamReader.ReadLine();
                     resultString += line;
                 }

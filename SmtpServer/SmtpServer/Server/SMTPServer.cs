@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,21 +19,106 @@ namespace SmtpServer.Server
         private const string ehlo = "EHLO";
         private const string helo = "HELO";
         private const string plainTextSeparator = "quoted-printable";
-
+        // RL this would be an sql db or something to that sort.
         private TcpClient tcpClient;
-        private Email email;
+        private NetworkStream stream;
         private bool messageIncoming;
+        private bool authenticated;
+
+        public bool isPop { get; internal set; }
+        public SslStream SslStream { get; private set; }
+
 
         internal void Init(TcpClient client)
         {
             tcpClient = client;
+            stream = tcpClient.GetStream();
         }
 
 
         public async Task Run()
         {
+            if (isPop)
+            {
+                await RunPop3();
+            }
+            else
+            {
+                await RunSmtp();
+            }
+
+        }
+
+        private async Task RunPop3()
+        {
+            string usernameMsg = "", passwordMsg = "", strMessage = String.Empty;
+            await Write($"+OK Custom Pop ready for requests from {((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString()}" + Environment.NewLine);
+           
+            while (true)
+            {
+                strMessage = await Read();
+                if (strMessage.Length > 0)
+                {
+                    if (strMessage.Contains("USER"))
+                    {
+                        usernameMsg = strMessage;
+                        await Write("+OK send PASS" + Environment.NewLine);
+                    }
+                    else if (strMessage.Contains("PASS"))
+                    {
+                        passwordMsg = strMessage;
+                        if (userValidationOK(usernameMsg, passwordMsg))
+                        {
+                            await Write("+OK Welcome." + Environment.NewLine);
+                            authenticated = true;
+                        }
+                    }
+                    else if (strMessage.StartsWith("LIST"))
+                    {
+                        // this is cause we don't have an actual real inbox, so each message is marked as 100.
+                        int mockSize = 100;
+                        List<Email> emails = MailSingleton.emails;
+                        if (strMessage.Any(c => char.IsDigit(c))) 
+                        {
+                            string indexString = Regex.Match(strMessage, @"\d+").Value;
+                            int index = int.Parse(indexString);
+                            if ( index > emails.Count - 1 || index.Equals(0))
+                            {
+                                await Write($"-ERR Index {index} out of range.");
+                            }
+                            else
+                            {
+                                await Write($"+OK {index} {mockSize}");
+                            }
+                        }
+                        else
+                        {
+                            await Write($"+OK {emails.Count} {emails.Count * mockSize}");
+                            // Ends the send
+                            await Write(".");
+
+                        }
+                    }
+                    else if (strMessage.Contains("QUIT"))
+                    {
+                        await Write("+OK Farewell.");
+                        break;
+                    }
+                }
+            }
+        }
+
+        // mock implementation
+        private bool userValidationOK(string user, string password)
+        {
+            return true;
+        }
+
+        private async Task RunSmtp()
+        {
             string strMessage = String.Empty;
-            email = new Email();
+            Email email = new Email();
+
             await Write("220 localhost -- Stub Email server");
 
             while (true)
@@ -48,16 +137,14 @@ namespace SmtpServer.Server
                 {
                     if (strMessage.StartsWith("QUIT"))
                     {
-                        Console.WriteLine(strMessage);
                         email.Quit = strMessage;
+                        await Write("221 OK");
                         tcpClient.Close();
-                        break;//exit while
+                        break;
                     }
-                    //message has successfully been received
                     else if (strMessage.StartsWith(ehlo) || strMessage.StartsWith(helo))
                     {
                         email.Helo = strMessage;
-                        Console.WriteLine(strMessage);
                         await Write("250 OK");
                     }
 
@@ -65,7 +152,6 @@ namespace SmtpServer.Server
                     {
                         email.RecipientRaw = strMessage;
                         email.Recipient = ParseFromMessage(strMessage, recipient);
-                        Console.WriteLine(strMessage);
                         await Write("250 OK");
                     }
 
@@ -87,16 +173,10 @@ namespace SmtpServer.Server
                     {
                         email.TextPlain = strMessage;
                         messageIncoming = false;
+                        MailSingleton.emails.Add(email);
                     }
                 }
             }
-        }
-
-        private string ParseText(string data)
-        {
-            int index = data.IndexOf(plainTextSeparator);
-            string ret = data.Substring(index, data.Length - index);
-            return ret;
         }
 
         private string ParseFromMessage(string strMessage, string msgType)
@@ -120,11 +200,9 @@ namespace SmtpServer.Server
         {
             byte[] messageBytes = new byte[8192];
             int bytesRead = 0;
-            NetworkStream clientStream = tcpClient.GetStream();
             ASCIIEncoding encoder = new ASCIIEncoding();
-            bytesRead = await clientStream.ReadAsync(messageBytes, 0, 8192);
+            bytesRead = await stream.ReadAsync(messageBytes, 0, 8192);
             string strMessage = encoder.GetString(messageBytes, 0, bytesRead);
-            Console.WriteLine(strMessage);
             return strMessage;
         }
     }
