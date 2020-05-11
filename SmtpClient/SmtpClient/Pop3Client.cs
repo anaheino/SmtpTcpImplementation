@@ -12,8 +12,9 @@ namespace SmtpClient
         private string password;
         private string mailServer;
         private TcpClient tcpClient;
-        private SslStream stream;
-        private StreamWriter streamWriter;
+        private bool isSSL;
+        private SslStream sslStream;
+        private NetworkStream stream;
         private StreamReader streamReader;
 
         public Pop3Client(string user, string password, string mailServer)
@@ -40,14 +41,21 @@ namespace SmtpClient
             return result;
         }
 
-        internal void Connect()
+        internal void Connect(bool ssl = true)
         {
+            isSSL = ssl;
             tcpClient.Connect(mailServer, 995);
-
-            stream = new SslStream(tcpClient.GetStream());
-            stream.AuthenticateAsClient(mailServer);
-            streamWriter = new StreamWriter(stream);
-            streamReader = new StreamReader(stream);
+            if (ssl)
+            {
+                sslStream = new SslStream(tcpClient.GetStream());
+                sslStream.AuthenticateAsClient(mailServer);
+                streamReader = new StreamReader(sslStream);
+            }
+            else
+            {
+                stream = tcpClient.GetStream();
+                streamReader = new StreamReader(stream);
+            }
         }
 
         internal string Login()
@@ -61,7 +69,6 @@ namespace SmtpClient
                 resultString = Read();
                 Write("PASS " + password + Environment.NewLine);
                 resultString = Read();
-
             }
             catch (Exception e)
             {
@@ -73,8 +80,16 @@ namespace SmtpClient
         private void Write(string data)
         {
             var byteData = System.Text.Encoding.ASCII.GetBytes(data.ToCharArray());
-            stream.Write(byteData, 0, byteData.Length);
-            stream.Flush();
+            if (isSSL)
+            {
+                sslStream.Write(byteData, 0, byteData.Length);
+                sslStream.Flush();
+            }
+            else
+            {
+                stream.Write(byteData, 0, byteData.Length);
+                stream.Flush();
+            }
         }
 
         internal string Disconnect()

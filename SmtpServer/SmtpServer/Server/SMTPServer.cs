@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -15,21 +18,95 @@ namespace SmtpServer.Server
         private const string ehlo = "EHLO";
         private const string helo = "HELO";
         private const string plainTextSeparator = "quoted-printable";
-
+        // RL this would be an sql db or something to that sort.
         private TcpClient tcpClient;
-        private Email email;
+        private NetworkStream stream;
         private bool messageIncoming;
+
+        public bool isPop { get; internal set; }
+        public SslStream SslStream { get; private set; }
+
 
         internal void Init(TcpClient client)
         {
             tcpClient = client;
+            stream = tcpClient.GetStream();
         }
 
 
         public async Task Run()
         {
+            if (isPop)
+            {
+                await RunPop3();
+            }
+            else
+            {
+                await RunSmtp();
+            }
+
+        }
+
+        private async Task RunPop3()
+        {
             string strMessage = String.Empty;
-            email = new Email();
+            await Write($"+OK Custom Pop ready for requests from {((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString()}" + Environment.NewLine);
+            await AuthenticatePop3();
+            while (true)
+            {
+                strMessage = await Read();
+                if (strMessage.Length > 0)
+                {
+                    if (strMessage.StartsWith("LIST"))
+                    {
+                        // Handle list shit
+                        if (strMessage.Any(c => char.IsDigit(c))) 
+                        {
+
+                        }
+                        else
+                        {
+                            List<Email> emails = MailSingleton.emails;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private async Task AuthenticatePop3()
+        {
+            try
+            {
+                string user = await Read();
+                await Write("+OK send PASS" + Environment.NewLine);
+                string password = await Read();
+                if (userValidationOK(user, password))
+                {
+                    await Write("+OK Welcome." + Environment.NewLine);
+                }
+                else
+                {
+                    // Stub, not triggered currently.
+                    await Write("+ERROR." + Environment.NewLine);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        // mock implementation
+        private bool userValidationOK(string user, string password)
+        {
+            return true;
+        }
+
+        private async Task RunSmtp()
+        {
+            string strMessage = String.Empty;
+            Email email = new Email();
+
             await Write("220 localhost -- Stub Email server");
 
             while (true)
@@ -48,16 +125,13 @@ namespace SmtpServer.Server
                 {
                     if (strMessage.StartsWith("QUIT"))
                     {
-                        Console.WriteLine(strMessage);
                         email.Quit = strMessage;
                         tcpClient.Close();
                         break;//exit while
                     }
-                    //message has successfully been received
                     else if (strMessage.StartsWith(ehlo) || strMessage.StartsWith(helo))
                     {
                         email.Helo = strMessage;
-                        Console.WriteLine(strMessage);
                         await Write("250 OK");
                     }
 
@@ -65,7 +139,6 @@ namespace SmtpServer.Server
                     {
                         email.RecipientRaw = strMessage;
                         email.Recipient = ParseFromMessage(strMessage, recipient);
-                        Console.WriteLine(strMessage);
                         await Write("250 OK");
                     }
 
@@ -87,16 +160,10 @@ namespace SmtpServer.Server
                     {
                         email.TextPlain = strMessage;
                         messageIncoming = false;
+                        MailSingleton.emails.Add(email);
                     }
                 }
             }
-        }
-
-        private string ParseText(string data)
-        {
-            int index = data.IndexOf(plainTextSeparator);
-            string ret = data.Substring(index, data.Length - index);
-            return ret;
         }
 
         private string ParseFromMessage(string strMessage, string msgType)
@@ -120,11 +187,9 @@ namespace SmtpServer.Server
         {
             byte[] messageBytes = new byte[8192];
             int bytesRead = 0;
-            NetworkStream clientStream = tcpClient.GetStream();
             ASCIIEncoding encoder = new ASCIIEncoding();
-            bytesRead = await clientStream.ReadAsync(messageBytes, 0, 8192);
+            bytesRead = await stream.ReadAsync(messageBytes, 0, 8192);
             string strMessage = encoder.GetString(messageBytes, 0, bytesRead);
-            Console.WriteLine(strMessage);
             return strMessage;
         }
     }
