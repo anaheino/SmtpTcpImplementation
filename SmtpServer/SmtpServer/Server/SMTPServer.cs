@@ -138,8 +138,9 @@ namespace SmtpServer.Server
                     if (strMessage.StartsWith("QUIT"))
                     {
                         email.Quit = strMessage;
+                        await Write("221 OK");
                         tcpClient.Close();
-                        break;//exit while
+                        break;
                     }
                     else if (strMessage.StartsWith(ehlo) || strMessage.StartsWith(helo))
                     {
