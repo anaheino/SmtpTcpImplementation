@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,7 @@ namespace SmtpServer.Server
         private TcpClient tcpClient;
         private NetworkStream stream;
         private bool messageIncoming;
+        private bool authenticated;
 
         public bool isPop { get; internal set; }
         public SslStream SslStream { get; private set; }
@@ -49,50 +51,60 @@ namespace SmtpServer.Server
 
         private async Task RunPop3()
         {
-            string strMessage = String.Empty;
+            string usernameMsg = "", passwordMsg = "", strMessage = String.Empty;
             await Write($"+OK Custom Pop ready for requests from {((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString()}" + Environment.NewLine);
-            await AuthenticatePop3();
+           
             while (true)
             {
                 strMessage = await Read();
                 if (strMessage.Length > 0)
                 {
-                    if (strMessage.StartsWith("LIST"))
+                    if (strMessage.Contains("USER"))
                     {
-                        // Handle list shit
+                        usernameMsg = strMessage;
+                        await Write("+OK send PASS" + Environment.NewLine);
+                    }
+                    else if (strMessage.Contains("PASS"))
+                    {
+                        passwordMsg = strMessage;
+                        if (userValidationOK(usernameMsg, passwordMsg))
+                        {
+                            await Write("+OK Welcome." + Environment.NewLine);
+                            authenticated = true;
+                        }
+                    }
+                    else if (strMessage.StartsWith("LIST"))
+                    {
+                        // this is cause we don't have an actual real inbox, so each message is marked as 100.
+                        int mockSize = 100;
+                        List<Email> emails = MailSingleton.emails;
                         if (strMessage.Any(c => char.IsDigit(c))) 
                         {
-
+                            string indexString = Regex.Match(strMessage, @"\d+").Value;
+                            int index = int.Parse(indexString);
+                            if ( index > emails.Count - 1 || index.Equals(0))
+                            {
+                                await Write($"-ERR Index {index} out of range.");
+                            }
+                            else
+                            {
+                                await Write($"+OK {index} {mockSize}");
+                            }
                         }
                         else
                         {
-                            List<Email> emails = MailSingleton.emails;
+                            await Write($"+OK {emails.Count} {emails.Count * mockSize}");
+                            // Ends the send
+                            await Write(".");
+
                         }
                     }
+                    else if (strMessage.Contains("QUIT"))
+                    {
+                        await Write("+OK Farewell.");
+                        break;
+                    }
                 }
-            }
-
-        }
-
-        private async Task AuthenticatePop3()
-        {
-            try
-            {
-                string user = await Read();
-                await Write("+OK send PASS" + Environment.NewLine);
-                string password = await Read();
-                if (userValidationOK(user, password))
-                {
-                    await Write("+OK Welcome." + Environment.NewLine);
-                }
-                else
-                {
-                    // Stub, not triggered currently.
-                    await Write("+ERROR." + Environment.NewLine);
-                }
-            }
-            catch
-            {
             }
         }
 
