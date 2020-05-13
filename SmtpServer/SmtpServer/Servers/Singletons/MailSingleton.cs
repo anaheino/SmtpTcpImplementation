@@ -9,8 +9,7 @@ namespace SmtpServer.Server
         private static readonly MailSingleton instance = new MailSingleton();
 
         public static List<Email> emails { get; set; }
-        // Explicit static constructor to tell C# compiler
-        // not to mark type as beforefieldinit
+        
         static MailSingleton()
         {
         }
