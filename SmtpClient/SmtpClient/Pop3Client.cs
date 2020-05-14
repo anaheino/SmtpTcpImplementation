@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace SmtpClient
 {
-    internal class Pop3Client
+    internal class Pop3Client : IEmailClient
     {
         private string user;
         private string password;
@@ -25,7 +25,7 @@ namespace SmtpClient
             tcpClient = new TcpClient();
         }
 
-        internal string OpenInbox(int index = 0)
+        public string OpenInbox(int index = 0)
         {
             string result = "";
             if (!tcpClient.Connected) return "ERROR! Not connected!";
@@ -50,7 +50,7 @@ namespace SmtpClient
             return result;
         }
 
-        internal void Connect(bool ssl = true)
+        public void Connect(bool ssl = true)
         {
             isSSL = ssl;
             tcpClient.Connect(mailServer, 995);
@@ -67,7 +67,7 @@ namespace SmtpClient
             }
         }
 
-        internal bool Login()
+        public bool Login()
         {
             bool loginSuccess = false;
             string resultString = "";
@@ -100,7 +100,7 @@ namespace SmtpClient
             return loginSuccess;
         }
 
-        private void Write(string data)
+        public void Write(string data)
         {
             var byteData = System.Text.Encoding.ASCII.GetBytes(data.ToCharArray());
             if (isSSL)
@@ -115,7 +115,7 @@ namespace SmtpClient
             }
         }
 
-        internal string Disconnect()
+        public string Disconnect()
         {
             Write("QUIT" + Environment.NewLine);
             string result = Read();
@@ -123,7 +123,7 @@ namespace SmtpClient
             return result;
         }
 
-        private string Read(bool readMultipleLines = false)
+        public string Read(bool readMultipleLines = false)
         {
             string resultString = "";
             string line = null;
