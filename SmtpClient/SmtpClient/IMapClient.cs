@@ -5,6 +5,8 @@
         private string username;
         private string password;
         private string server;
+        public static readonly int IMAP4_SSL = 993;
+        public static readonly int IMAP4 = 143;
 
         public IMapClient(string username, string password, string server)
         {
