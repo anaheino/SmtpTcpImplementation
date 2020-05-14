@@ -46,6 +46,9 @@ namespace SmtpClient
             }
         }
 
+        /// <summary>
+        /// Handles logging in, LOGIN command and cred providing.
+        /// </summary>
         public async Task<bool> Login()
         {
             bool loginSuccess = false;
@@ -93,6 +96,9 @@ namespace SmtpClient
             return await streamReader.ReadLineAsync();
         }
 
+        /// <summary>
+        /// Handles LIST, SELECT and FETCH command stubs.
+        /// </summary>
         public async Task<string> OpenInbox(int index = 0)
         {
             // IMAP doesn't support index 0, so if they parametrized it, change to 1.
@@ -109,6 +115,9 @@ namespace SmtpClient
             return await ReadCommandResults(msgNumber);
         }
 
+        /// <summary>
+        /// Reads command results until success is printed (msg over)
+        /// </summary>
         private async Task<string> ReadCommandResults(string msgNumber)
         {
             bool commandEnded = false;
@@ -157,6 +166,10 @@ namespace SmtpClient
             return logout;
         }
 
+        /// <summary>
+        /// Raises msg number up to A999, then resets to A000.
+        /// </summary>
+        /// <returns></returns>
         private string GetCommandNumber()
         {
             if (commandNumber >= 99 && commandNumber < 1000)

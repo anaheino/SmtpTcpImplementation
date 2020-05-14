@@ -12,6 +12,9 @@ namespace SmtpServer
     {
         private List<IMailServer> servers;
 
+        /// <summary>
+        /// Starts running all the servers.
+        /// </summary>
         public void RunServers()
         {
             // This is stupid temp solution for inbox. in RL, a db.
@@ -34,12 +37,10 @@ namespace SmtpServer
                 await RunIMAP();
             });
 
-
             TaskList.Add(smtpTask);
             TaskList.Add(pop3Task);
             Task.WaitAll(TaskList.ToArray());
         }
-
 
         private async Task RunSMTP()
         {
@@ -49,6 +50,7 @@ namespace SmtpServer
 
             while (true)
             {
+                // Note that code stays here, until someone tries to connect to it. So this loop doesn't run continuously.
                 TcpClient client = await listener.AcceptTcpClientAsync();
                 SMTPServer handler = new SMTPServer();
                 servers.Add(handler);

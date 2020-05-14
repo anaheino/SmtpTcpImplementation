@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace SmtpServer.Server
 {
+    /// <summary>
+    /// Base class for protocol server, has all the reused functions inside.
+    /// </summary>
     public class ProtocolServer
     {
         private const int byteSize = 8192;

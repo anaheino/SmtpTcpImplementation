@@ -33,6 +33,9 @@ namespace SmtpClient
 
         }
 
+        /// <summary>
+        /// Starts the actual mail sending tasks.
+        /// </summary>
         private static Task GenerateClientTask(IEmailClient emailClient)
         {
             return Task.Run(async () =>
@@ -50,6 +53,10 @@ namespace SmtpClient
             });
         }
 
+        /// <summary>
+        /// Sends some messages to the SMTP server inbox, so we have something to query during this run.
+        /// This is necessary cause currently mail is stored in a mock singleton, and not an actual db.
+        /// </summary>
         private static void InitLocalTest()
         {
             for (int i = 0; i < 5; i++)

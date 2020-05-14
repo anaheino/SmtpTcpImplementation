@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SmtpClient
 {
-    internal class Pop3Client : MailClient, IEmailClient
+    internal class Pop3Client : IEmailClient
     {
         private string user;
         private string password;
@@ -26,6 +26,9 @@ namespace SmtpClient
             tcpClient = new TcpClient();
         }
 
+        /// <summary>
+        /// Simulates opening an inbox. Handles List command.
+        /// </summary>
         public async Task<string> OpenInbox(int index = 0)
         {
             string result = "";
@@ -68,6 +71,9 @@ namespace SmtpClient
             }
         }
 
+        /// <summary>
+        /// Simulates logging in to POP3. Handles  user credential commands.
+        /// </summary>
         public async Task<bool> Login()
         {
             bool loginSuccess = false;

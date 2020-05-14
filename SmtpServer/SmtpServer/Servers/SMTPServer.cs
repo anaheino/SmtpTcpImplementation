@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace SmtpServer.Server
 {
+    /// <summary>
+    /// SMTP Server, tested with dotnets built in smtp wrappers.
+    /// </summary>
     public class SMTPServer : ProtocolServer, IMailServer
     {
         public readonly char[] separators = new char[2] { '<', '>' };
@@ -27,6 +30,10 @@ namespace SmtpServer.Server
             await RunSmtp();
         }
 
+        /// <summary>
+        /// Handles SMTP protocol stubs: HELO, QUIT, RCPT, FROM and data.
+        /// </summary>
+        /// <returns></returns>
         private async Task RunSmtp()
         {
             string strMessage = String.Empty;
@@ -92,12 +99,15 @@ namespace SmtpServer.Server
             }
         }
 
+        /// <summary>
+        /// Parses stuff such as sender and recipient.
+        /// </summary>
         private string ParseFromMessage(string strMessage, string msgType)
         {
-            string sender = strMessage.Remove(0, (msgType + separators[0]).Length);
-            int index = sender.IndexOf(separators[1]);
-            sender = sender.Substring(0, index);
-            return sender;
+            string actualValue = strMessage.Remove(0, (msgType + separators[0]).Length);
+            int index = actualValue.IndexOf(separators[1]);
+            actualValue = actualValue.Substring(0, index);
+            return actualValue;
         }
     }
 }
