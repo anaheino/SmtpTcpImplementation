@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Mail;
 using System.Net.Sockets;
 using System.Threading;
@@ -12,23 +13,31 @@ namespace SmtpClient
         static void Main(string[] args)
         {
             InitLocalTest();
-            //client = new Pop3Client("anaheino", "xanadu92", "pop.gmail.com");
-
-            client.Connect(false);
-
-            if (!client.Login())
+            
+            List<IEmailClient> emailClients = new List<IEmailClient>()
             {
-                Console.WriteLine("ERROR!");
-                return;
-            }
-            string listResults = client.OpenInbox();
-            if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
+                new Pop3Client("yyy", "xxx", "localhost"),
+                new IMapClient("yyy", "xxx", "localhost"),
+            };
+            emailClients.ForEach(client =>
+            {
+                client.Connect(false);
 
-            listResults = client.OpenInbox(2);
-            if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
+                if (!client.Login())
+                {
+                    Console.WriteLine("ERROR!");
+                    return;
+                }
+                string listResults = client.OpenInbox();
+                if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
 
-            string disconnect = client.Disconnect();
-            if (!disconnect.Contains("OK")) Console.WriteLine($"Ran into problems quitting session! Error info: {disconnect}");
+                listResults = client.OpenInbox(2);
+                if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
+
+                string disconnect = client.Disconnect();
+                if (!disconnect.Contains("OK")) Console.WriteLine($"Ran into problems quitting session! Error info: {disconnect}");
+
+            });
         }
 
         private static void InitLocalTest()
