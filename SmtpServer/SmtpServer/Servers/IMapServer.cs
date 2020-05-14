@@ -41,6 +41,7 @@ namespace SmtpServer
                     }
                     else if (strMessage.Contains("LIST"))
                     {
+                        // Stub implementation
                         await Write($"* LIST \"Inbox\" (\\HasChildren \\NoSelect)");
                         await Write($"{msgNumber} OK Success");
                     }
