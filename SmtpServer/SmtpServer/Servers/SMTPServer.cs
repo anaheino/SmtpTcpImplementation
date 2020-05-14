@@ -21,7 +21,6 @@ namespace SmtpServer.Server
         // RL this would be an sql db or something to that sort.
         private bool messageIncoming;
 
-        public SslStream SslStream { get; private set; }
 
         public async Task Run()
         {

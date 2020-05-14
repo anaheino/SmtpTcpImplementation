@@ -1,10 +1,12 @@
-﻿namespace SmtpClient
+﻿using System.Threading.Tasks;
+
+namespace SmtpClient
 {
     internal interface IEmailClient
     {
-        void Connect(bool ssl = true);
-        bool Login();
-        string OpenInbox(int index = 0);
-        string Disconnect();
+        Task Connect(bool ssl = true);
+        Task<bool> Login();
+        Task<string> OpenInbox(int index = 0);
+        Task<string> Disconnect();
     }
 }
