@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace SmtpClient
 {
@@ -27,7 +28,7 @@ namespace SmtpClient
             tcpClient = new TcpClient();
         }
 
-        public void Connect(bool ssl = true)
+        public async Task Connect(bool ssl = true)
         {
             isSSL = ssl;
             if (ssl) tcpClient.Connect(server, IMAP4_SSL);
@@ -45,7 +46,7 @@ namespace SmtpClient
             }
         }
 
-        public bool Login()
+        public async Task<bool> Login()
         {
             bool loginSuccess = false;
             if (!tcpClient.Connected) return false;
@@ -54,12 +55,12 @@ namespace SmtpClient
             {
                 try
                 {
-                    string resultString = Read();
+                    string resultString = await Read();
                     if (resultString.Length > 0)
                     {
                         if (resultString.Contains("OK") && resultString.Contains("requests"))
                         {
-                            Write(msgNumber + $" LOGIN " + user.Trim() + " " + password + Environment.NewLine);
+                            await Write(msgNumber + $" LOGIN " + user.Trim() + " " + password + Environment.NewLine);
                         }
                         else if (resultString.Contains($"{msgNumber} OK {user}"))
                         {
@@ -72,63 +73,49 @@ namespace SmtpClient
             return loginSuccess;
         }
 
-        public void Write(string data)
+        public async Task Write(string data)
         {
             var byteData = System.Text.Encoding.ASCII.GetBytes(data.ToCharArray());
             if (isSSL)
             {
-                sslStream.Write(byteData, 0, byteData.Length);
-                sslStream.Flush();
+                await sslStream.WriteAsync(byteData, 0, byteData.Length);
+                await sslStream.FlushAsync();
             }
             else
             {
-                stream.Write(byteData, 0, byteData.Length);
-                stream.Flush();
+                await stream.WriteAsync(byteData, 0, byteData.Length);
+                await stream.FlushAsync();
             }
         }
 
-        public string Read(bool readMultipleLines = false)
+        public async Task<string> Read()
         {
-            string resultString = "";
-            string line = null;
-            if (readMultipleLines)
-            {
-                line = streamReader.ReadLine();
-                resultString += line;
-                while (!line.Equals(".") && !line.Contains("-ERR"))
-                {
-                    line = streamReader.ReadLine();
-                    resultString += line;
-                }
-                return resultString;
-            }
-            resultString = streamReader.ReadLine();
-            return resultString;
+            return await streamReader.ReadLineAsync();
         }
 
-        public string OpenInbox(int index = 0)
+        public async Task<string> OpenInbox(int index = 0)
         {
             // IMAP doesn't support index 0, so if they parametrized it, change to 1.
             if (index.Equals(0)) index++;
             
             string msgNumber = GetCommandNumber();
-            Write($"{msgNumber} LIST \"\" *" + Environment.NewLine);
-            string contents = ReadCommandResults(msgNumber);
+            await Write($"{msgNumber} LIST \"\" *" + Environment.NewLine);
+            string contents = await ReadCommandResults(msgNumber);
             msgNumber = GetCommandNumber();
-            Write($"{msgNumber} Select Inbox" + Environment.NewLine);
-            string response = ReadCommandResults(msgNumber);
+            await Write($"{msgNumber} SELECT Inbox" + Environment.NewLine);
+            string response = await ReadCommandResults(msgNumber);
             msgNumber = GetCommandNumber();
-            Write($"{msgNumber} FETCH {index} FULL" + Environment.NewLine);
-            return ReadCommandResults(msgNumber);
+            await Write($"{msgNumber} FETCH {index} FULL" + Environment.NewLine);
+            return await ReadCommandResults(msgNumber);
         }
 
-        private string ReadCommandResults(string msgNumber)
+        private async Task<string> ReadCommandResults(string msgNumber)
         {
             bool commandEnded = false;
             string result = "";
             while (!commandEnded)
             {
-                string line = Read();
+                string line = await Read();
                 if (line.Length > 0)
                 {
                     if (line.Contains(msgNumber) && line.Contains("Success"))
@@ -144,15 +131,15 @@ namespace SmtpClient
             return result;
         }
 
-        public string Disconnect()
+        public async Task<string> Disconnect()
         {
             string msgNumber = GetCommandNumber();
-            Write($"{msgNumber} LOGOUT" + Environment.NewLine);
+            await Write($"{msgNumber} LOGOUT" + Environment.NewLine);
             string logout = "";
             bool commandEnded = false;
             while (!commandEnded)
             {
-                string line = Read();
+                string line = await Read();
                 if (line.Length > 0)
                 {
                     if (line.Contains(msgNumber) && line.Contains("Success"))

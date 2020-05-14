@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace SmtpClient
 {
@@ -25,7 +26,7 @@ namespace SmtpClient
             tcpClient = new TcpClient();
         }
 
-        public string OpenInbox(int index = 0)
+        public async Task<string> OpenInbox(int index = 0)
         {
             string result = "";
             if (!tcpClient.Connected) return "ERROR! Not connected!";
@@ -34,14 +35,14 @@ namespace SmtpClient
                 bool readMoreThanOneLine = false;
                 if (index.Equals(0))
                 {
-                    Write("LIST" + Environment.NewLine);
+                    await Write("LIST" + Environment.NewLine);
                     readMoreThanOneLine = true;
                 }
                 else
                 {
-                    Write($"LIST {index}" + Environment.NewLine);
+                    await Write($"LIST {index}" + Environment.NewLine);
                 } 
-                result = Read(readMoreThanOneLine);
+                result = await Read(readMoreThanOneLine);
             }
             catch (Exception e)
             {
@@ -50,7 +51,7 @@ namespace SmtpClient
             return result;
         }
 
-        public void Connect(bool ssl = true)
+        public async Task Connect(bool ssl = true)
         {
             isSSL = ssl;
             tcpClient.Connect(mailServer, 995);
@@ -67,7 +68,7 @@ namespace SmtpClient
             }
         }
 
-        public bool Login()
+        public async Task<bool> Login()
         {
             bool loginSuccess = false;
             string resultString = "";
@@ -76,13 +77,12 @@ namespace SmtpClient
             {
                 try
                 {
-                    resultString = Read();
+                    resultString = await Read();
                     if (resultString.Length > 0)
                     {
-                        
                         if (resultString.Contains("PASS"))
                         {
-                            Write("PASS " + password + Environment.NewLine);
+                            await Write("PASS " + password + Environment.NewLine);
                         }
                         else if (resultString.Contains("Welcome"))
                         {
@@ -90,7 +90,7 @@ namespace SmtpClient
                         }
                         else if (resultString.Contains("+OK") && resultString.Contains("requests"))
                         {
-                            Write("USER " + user.Trim() + Environment.NewLine);
+                            await Write("USER " + user.Trim() + Environment.NewLine);
                         }
                     }
                 }
@@ -100,45 +100,45 @@ namespace SmtpClient
             return loginSuccess;
         }
 
-        public void Write(string data)
+        public async Task Write(string data)
         {
             var byteData = System.Text.Encoding.ASCII.GetBytes(data.ToCharArray());
             if (isSSL)
             {
-                sslStream.Write(byteData, 0, byteData.Length);
-                sslStream.Flush();
+                await sslStream.WriteAsync(byteData, 0, byteData.Length);
+                await sslStream.FlushAsync();
             }
             else
             {
-                stream.Write(byteData, 0, byteData.Length);
-                stream.Flush();
+                await stream.WriteAsync(byteData, 0, byteData.Length);
+                await stream.FlushAsync();
             }
         }
 
-        public string Disconnect()
+        public async Task<string> Disconnect()
         {
-            Write("QUIT" + Environment.NewLine);
-            string result = Read();
+            await Write("QUIT" + Environment.NewLine);
+            string result = await Read();
             tcpClient.Dispose();
             return result;
         }
 
-        public string Read(bool readMultipleLines = false)
+        public async Task<string> Read(bool readMultipleLines = false)
         {
             string resultString = "";
-            string line = null;
+            string line = "";
             if (readMultipleLines)
             {
-                line = streamReader.ReadLine();
+                line = await streamReader.ReadLineAsync();
                 resultString += line;
                 while (!line.Equals(".") && !line.Contains("-ERR"))
                 {
-                    line = streamReader.ReadLine();
+                    line = await streamReader.ReadLineAsync();
                     resultString += line;
                 }
                 return resultString;
             }
-            resultString = streamReader.ReadLine();
+            resultString = await streamReader.ReadLineAsync();
             return resultString;
         }
     }

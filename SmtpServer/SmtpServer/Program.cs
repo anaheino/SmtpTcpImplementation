@@ -10,14 +10,10 @@ namespace SmtpServer
 {
     public class Program
     {
-        private static List<Email> receivedEmails;
-        private static List<SMTPServer> servers;
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             ServerHandler handler = new ServerHandler();
-
-            await handler.RunServers();
+            handler.RunServers();
         }
-
     }
 }

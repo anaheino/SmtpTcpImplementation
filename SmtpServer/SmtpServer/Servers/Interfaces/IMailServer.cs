@@ -1,9 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace SmtpServer.Server
 {
     public interface IMailServer
     {
         Task Run();
+        void Init(TcpClient client);
+
     }
 }

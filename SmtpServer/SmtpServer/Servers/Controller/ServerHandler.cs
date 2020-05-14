@@ -1,4 +1,5 @@
 ﻿using SmtpServer.Server;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -15,6 +16,7 @@ namespace SmtpServer
         {
             // This is stupid temp solution for inbox. in RL, a db.
             MailSingleton.emails = new List<Email>();
+
             servers = new List<IMailServer>();
             List<Task> TaskList = new List<Task>();
             IPEndPoint pop3Endpoint = new IPEndPoint(IPAddress.Any, 995);
@@ -27,10 +29,17 @@ namespace SmtpServer
                 await RunPop3();
             });
             
+            var imapTask = Task.Run(async () =>
+            {
+                await RunIMAP();
+            });
+
+
             TaskList.Add(smtpTask);
             TaskList.Add(pop3Task);
             Task.WaitAll(TaskList.ToArray());
         }
+
 
         private async Task RunSMTP()
         {
@@ -65,5 +74,24 @@ namespace SmtpServer
                 thread.Start();
             }
         }
+
+
+        private async Task RunIMAP()
+        {
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 143);
+            TcpListener listener = new TcpListener(endPoint);
+            listener.Start();
+
+            while (true)
+            {
+                TcpClient client = await listener.AcceptTcpClientAsync();
+                IMailServer handler = new IMapServer();
+                servers.Add(handler);
+                handler.Init(client);
+                Thread thread = new Thread(new ThreadStart(async () => { await handler.Run(); }));
+                thread.Start();
+            }
+        }
+
     }
 }

@@ -11,7 +11,7 @@ namespace SmtpServer.Server
         internal TcpClient tcpClient { get; set; }
         internal NetworkStream stream { get; set; }
 
-        internal void Init(TcpClient client)
+        public void Init(TcpClient client)
         {
             tcpClient = client;
             stream = tcpClient.GetStream();
