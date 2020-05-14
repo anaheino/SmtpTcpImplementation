@@ -1,3 +1,5 @@
+/FtpClient/FTPClient/bin/*
+/FtpClient/FTPClient/obj/*
 /SmtpClient/SmtpClient/bin/*
 /SmtpClient/SmtpClient/obj/*
 /SmtpServer/SmtpServer/bin/*
