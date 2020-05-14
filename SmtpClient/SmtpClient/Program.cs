@@ -12,16 +12,16 @@ namespace SmtpClient
 
         static void Main(string[] args)
         {
-            InitLocalTest();
+            //InitLocalTest();
             
             List<IEmailClient> emailClients = new List<IEmailClient>()
             {
-                new Pop3Client("yyy", "xxx", "localhost"),
-                new IMapClient("yyy", "xxx", "localhost"),
+                //new Pop3Client("yyy", "xxx", "localhost"),
+                new IMapClient("xxxx", "yyyy", "imap.gmail.com"),
             };
             emailClients.ForEach(client =>
             {
-                client.Connect(false);
+                client.Connect();
 
                 if (!client.Login())
                 {
@@ -29,13 +29,8 @@ namespace SmtpClient
                     return;
                 }
                 string listResults = client.OpenInbox();
-                if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
-
                 listResults = client.OpenInbox(2);
-                if (!listResults.Contains("OK")) Console.WriteLine($"Ran into problems! Error info: {listResults}");
-
                 string disconnect = client.Disconnect();
-                if (!disconnect.Contains("OK")) Console.WriteLine($"Ran into problems quitting session! Error info: {disconnect}");
 
             });
         }

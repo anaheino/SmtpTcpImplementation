@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace SmtpClient
 {
-    internal class Pop3Client : IEmailClient
+    internal class Pop3Client : MailClient, IEmailClient
     {
         private string user;
         private string password;
