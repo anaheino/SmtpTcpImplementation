@@ -1,5 +1,8 @@
 ﻿namespace SmtpServer.Server
 {
+    /// <summary>
+    /// Mail singleton has a list of these.
+    /// </summary>
     public class Email
     {
         public string Sender { get; internal set; }

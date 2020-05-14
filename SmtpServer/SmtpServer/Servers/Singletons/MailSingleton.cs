@@ -4,6 +4,9 @@ using System.Text;
 
 namespace SmtpServer.Server
 {
+    /// <summary>
+    /// Singleton for simulating an inbox. Thread-safe implementation.
+    /// </summary>
     public sealed class MailSingleton
     {
         private static readonly MailSingleton instance = new MailSingleton();

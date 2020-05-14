@@ -16,6 +16,10 @@ namespace SmtpServer
         {
             await RunIMap();
         }
+        /// <summary>
+        /// Handles all implemented IMAP command stubs: LOGIN, LIST, SELECT, LOGOUT and FETCH.
+        /// </summary>
+        /// <returns></returns>
         private async Task RunIMap()
         {
             string username = "", password = "", strMessage = String.Empty;
@@ -46,6 +50,7 @@ namespace SmtpServer
                     }
                     else if (strMessage.Contains("FETCH") && strMessage.Contains("FULL"))
                     {
+                        // stub, because an actual implementation would take a quite lot more effort.
                         Email email = MailSingleton.emails[0];
                         await Write($"1 FETCH Recipient: {email.Recipient}, Sender: {email.Sender}, subject:{email.TextPlain}, {email.Data}");
                         await Write($"{msgNumber} OK Success");

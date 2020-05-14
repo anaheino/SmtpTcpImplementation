@@ -15,6 +15,10 @@ namespace SmtpServer.Server
         {
             await RunPop3();
         }
+
+        /// <summary>
+        /// Handles POP3 commands: USER, PASS, LIST and QUIT stubs.
+        /// </summary>
         private async Task RunPop3()
         {
             string usernameMsg = "", passwordMsg = "", strMessage = String.Empty;
