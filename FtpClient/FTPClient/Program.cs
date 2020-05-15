@@ -8,7 +8,19 @@ namespace FTPClient
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            FtpClient ftpClient = new FtpClient("localhost", 21, 100);
+            //await RunFtp();
+            await RunTftp();
+        }
+
+        private static async Task RunTftp()
+        {
+            TftpClient tftpClient = new TftpClient("localhost", 69);
+            await tftpClient.Get();
+        }
+
+        private static async Task RunFtp()
+        {
+            FtpClient ftpClient = new FtpClient("localhost", 21);
             await ftpClient.Connect();
             await ftpClient.SetPassive();
             await ftpClient.ListContents();

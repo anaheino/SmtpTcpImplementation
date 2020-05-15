@@ -19,7 +19,7 @@ namespace FTPClient
         private StreamReader communicationStreamReader;
         private StreamReader dataReader;
 
-        public FtpClient(string address, int port, int dataport)
+        public FtpClient(string address, int port)
         {
             this.address = address;
             tcpClient = new TcpClient(address, port);
