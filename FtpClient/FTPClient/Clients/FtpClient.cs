@@ -27,12 +27,12 @@ namespace FTPClient
             communicationStreamReader = new StreamReader(communicationStream);
         }
 
-        public async Task Connect()
+        public async Task Connect(string user, string password)
         {
             string msg = await Read();
-            await Write("USER hullumies");
+            await Write("USER " + user);
             msg = await Read();
-            await Write("PASS hullunheina");
+            await Write("PASS " + password);
             msg = await Read(); 
         }
 
